@@ -24,6 +24,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import AddIcon from '@mui/icons-material/Add';
 import NoteIcon from '@mui/icons-material/Note';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import { format } from 'date-fns';
 import { useProjects } from '../contexts/ProjectsContext';
 import {
@@ -39,6 +40,7 @@ import CommitList from '../components/CommitList';
 import BranchList from '../components/BranchList';
 import PendingChangesList from '../components/PendingChangesList';
 import NotesList from '../components/NotesList';
+import AnalysisList from '../components/AnalysisList';
 
 function ProjectDetailsPage() {
   const { projectId } = useParams();
@@ -356,6 +358,7 @@ function ProjectDetailsPage() {
           {hasLocalRepo && <Tab icon={<AccountTreeIcon />} label="Branches" />}
           {hasLocalRepo && <Tab icon={<AddIcon />} label="Pending Changes" />}
           <Tab icon={<NoteIcon />} label="Notes" />
+          {hasLocalRepo && <Tab icon={<AnalyticsIcon />} label="Analysis" />}
         </Tabs>
       </Box>
 
@@ -387,6 +390,12 @@ function ProjectDetailsPage() {
             notes={notes}
             projectId={projectId}
             onRefresh={loadProjectData}
+          />
+        )}
+        {hasLocalRepo && tabValue === 4 && (
+          <AnalysisList
+            projectId={projectId}
+            project={project}
           />
         )}
         
