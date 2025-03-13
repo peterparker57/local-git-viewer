@@ -83,9 +83,19 @@ function FileViewer({ file, content }) {
         <Typography variant="caption" sx={{ color: 'white', opacity: 0.9 }}>
           Status: {file.status || (file.operation.charAt(0).toUpperCase() + file.operation.slice(1) + 'ed')}
         </Typography>
-        {file.size && (
+        {file.fileSize && (
           <Typography variant="caption" sx={{ color: 'white', opacity: 0.9, ml: 2 }}>
-            Size: {formatFileSize(file.size)}
+            Size: {formatFileSize(file.fileSize)}
+          </Typography>
+        )}
+        {file.createdAt && (
+          <Typography variant="caption" sx={{ color: 'white', opacity: 0.9, ml: 2 }}>
+            Created: {new Date(file.createdAt).toLocaleString()}
+          </Typography>
+        )}
+        {file.modifiedAt && (
+          <Typography variant="caption" sx={{ color: 'white', opacity: 0.9, ml: 2 }}>
+            Modified: {new Date(file.modifiedAt).toLocaleString()}
           </Typography>
         )}
       </Box>

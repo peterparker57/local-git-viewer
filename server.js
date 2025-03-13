@@ -713,11 +713,14 @@ app.post('/api/mcp/project-hub/get_file_snapshots', async (req, res) => {
     console.log('Commit found:', commitResult.length > 0);
     
     const sql = `
-      SELECT 
+      SELECT
         fs.id,
         fs.commit_id as commitId,
         fs.file_path as filePath,
-        fs.operation
+        fs.operation,
+        fs.file_size as fileSize,
+        fs.created_at as createdAt,
+        fs.modified_at as modifiedAt
       FROM file_snapshots fs
       WHERE fs.commit_id = ?
       ORDER BY fs.file_path
@@ -804,7 +807,7 @@ app.post('/api/mcp/project-hub/get_file_snapshots', async (req, res) => {
             fullPath: file.file_path, // Full path relative to project root
             operation,
             status,
-            size: fileStats ? fileStats.size : null,
+            fileSize: fileStats ? fileStats.size : null,
             createdAt: fileStats ? fileStats.birthtime.toISOString() : null,
             modifiedAt: fileStats ? fileStats.mtime.toISOString() : null
           };
@@ -828,7 +831,7 @@ app.post('/api/mcp/project-hub/get_file_snapshots', async (req, res) => {
             fullPath: 'example/path/file1.js',
             operation: 'modify',
             status: 'Modified',
-            size: 1024,
+            fileSize: 1024,
             createdAt: new Date(now.getTime() - 86400000).toISOString(), // 1 day ago
             modifiedAt: now.toISOString()
           },
@@ -839,7 +842,7 @@ app.post('/api/mcp/project-hub/get_file_snapshots', async (req, res) => {
             fullPath: 'example/path/file2.js',
             operation: 'add',
             status: 'Added',
-            size: 2048,
+            fileSize: 2048,
             createdAt: now.toISOString(),
             modifiedAt: now.toISOString()
           },
@@ -850,7 +853,7 @@ app.post('/api/mcp/project-hub/get_file_snapshots', async (req, res) => {
             fullPath: 'example/path/file3.js',
             operation: 'delete',
             status: 'Deleted',
-            size: 512,
+            fileSize: 512,
             createdAt: new Date(now.getTime() - 172800000).toISOString(), // 2 days ago
             modifiedAt: new Date(now.getTime() - 43200000).toISOString() // 12 hours ago
           }
@@ -878,17 +881,23 @@ app.post('/api/mcp/project-hub/get_file_content', async (req, res) => {
       // Return a placeholder message
       return res.json({
         content: 'Content not available for this file. This is a synthetic snapshot created from change records.',
-        operation: snapshotId.includes('_add_') ? 'add' : 
+        operation: snapshotId.includes('_add_') ? 'add' :
                   snapshotId.includes('_delete_') ? 'delete' : 'modify',
-        filePath: snapshotId.split('_').slice(2).join('_').replace(/_/g, '/')
+        filePath: snapshotId.split('_').slice(2).join('_').replace(/_/g, '/'),
+        fileSize: null,
+        createdAt: null,
+        modifiedAt: null
       });
     }
     
     const sql = `
-      SELECT 
+      SELECT
         fs.content,
         fs.operation,
-        fs.file_path as filePath
+        fs.file_path as filePath,
+        fs.file_size as fileSize,
+        fs.created_at as createdAt,
+        fs.modified_at as modifiedAt
       FROM file_snapshots fs
       WHERE fs.id = ?
     `;

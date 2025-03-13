@@ -260,7 +260,7 @@ function CommitDetailsPage() {
                           
                           {/* Always show file info in a consistent format */}
                           <Typography component="div" variant="body2" color="text.secondary" sx={{ mt: 1, mb: 0.5 }}>
-                            <strong>Size:</strong> {snapshot.size ? formatFileSize(snapshot.size) : 'Unknown'}
+                            <strong>Size:</strong> {snapshot.fileSize ? formatFileSize(snapshot.fileSize) : 'Unknown'}
                           </Typography>
                           
                           <Typography component="div" variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
