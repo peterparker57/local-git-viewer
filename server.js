@@ -758,13 +758,41 @@ app.post('/api/mcp/project-hub/get_file_snapshots', async (req, res) => {
         const files = await runQuery(filesSql, changeIds);
         console.log('Files associated with changes:', files.length);
         
+        // Get project path from database for all files
+        const projectPath = commitResult[0].project_id;
+        const projectSql = `SELECT path FROM projects WHERE id = ?`;
+        const projectResult = await runQuery(projectSql, [projectPath]);
+        
         // Create synthetic file snapshots from change_files
-        const syntheticSnapshots = files.map(file => ({
-          id: `synthetic_${file.change_id}_${file.file_path.replace(/[^a-zA-Z0-9]/g, '_')}`,
-          commitId: commitId,
-          filePath: file.file_path,
-          operation: changes.find(c => c.id === file.change_id)?.type || 'modify'
-        }));
+        const syntheticSnapshots = files.map(file => {
+          // Get file stats if possible
+          let fileStats = null;
+          
+          if (projectResult.length > 0) {
+            const fullPath = path.join(projectResult[0].path, file.file_path);
+            try {
+              if (fs.existsSync(fullPath)) {
+                fileStats = fs.statSync(fullPath);
+              }
+            } catch (err) {
+              console.error(`Error getting file stats for ${fullPath}:`, err);
+            }
+          }
+          
+          const operation = changes.find(c => c.id === file.change_id)?.type || 'modify';
+          
+          return {
+            id: `synthetic_${file.change_id}_${file.file_path.replace(/[^a-zA-Z0-9]/g, '_')}`,
+            commitId: commitId,
+            filePath: file.file_path,
+            fullPath: file.file_path, // Full path relative to project root
+            operation,
+            status: operation.charAt(0).toUpperCase() + operation.slice(1), // Capitalize operation
+            size: fileStats ? fileStats.size : null,
+            createdAt: fileStats ? fileStats.birthtime.toISOString() : null,
+            modifiedAt: fileStats ? fileStats.mtime.toISOString() : null
+          };
+        });
         
         if (syntheticSnapshots.length > 0) {
           console.log('Created synthetic snapshots:', syntheticSnapshots.length);
@@ -775,18 +803,29 @@ app.post('/api/mcp/project-hub/get_file_snapshots', async (req, res) => {
       // If still no snapshots, create a dummy snapshot for demonstration
       if (commitResult.length > 0) {
         console.log('Creating dummy snapshot for demonstration');
+        const now = new Date();
         const dummySnapshots = [
           {
             id: `dummy_${commitId}_1`,
             commitId: commitId,
             filePath: 'example/path/file1.js',
-            operation: 'modify'
+            fullPath: 'example/path/file1.js',
+            operation: 'modify',
+            status: 'Modified',
+            size: 1024,
+            createdAt: new Date(now.getTime() - 86400000).toISOString(), // 1 day ago
+            modifiedAt: now.toISOString()
           },
           {
             id: `dummy_${commitId}_2`,
             commitId: commitId,
             filePath: 'example/path/file2.js',
-            operation: 'add'
+            fullPath: 'example/path/file2.js',
+            operation: 'add',
+            status: 'Added',
+            size: 2048,
+            createdAt: now.toISOString(),
+            modifiedAt: now.toISOString()
           }
         ];
         return res.json(dummySnapshots);
