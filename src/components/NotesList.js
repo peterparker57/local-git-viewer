@@ -4,11 +4,9 @@ import {
   Typography,
   List,
   ListItem,
-  Card,
-  CardContent,
-  CardActions,
+  ListItemButton,
+  ListItemText,
   Button,
-  IconButton,
   TextField,
   Dialog,
   DialogTitle,
@@ -19,13 +17,13 @@ import {
   Divider,
   Alert,
   CircularProgress,
-  Modal,
-  Paper
+  Paper,
+  Grid
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import VisibilityIcon from '@mui/icons-material/Visibility';
+import NoteIcon from '@mui/icons-material/Note';
 import { format } from 'date-fns';
 import { createNote, updateNote, deleteNote } from '../services/projectService';
 
@@ -33,6 +31,7 @@ function NotesList({ notes, projectId, onRefresh }) {
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentNote, setCurrentNote] = useState(null);
+  const [selectedNote, setSelectedNote] = useState(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('');
@@ -41,52 +40,43 @@ function NotesList({ notes, projectId, onRefresh }) {
   const [error, setError] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState(null);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [viewingNote, setViewingNote] = useState(null);
+const handleOpenNoteDialog = (note = null) => {
+  if (note) {
+    setIsEditing(true);
+    setCurrentNote(note);
+    setTitle(note.title);
+    setContent(note.content);
+    setCategory(note.category || '');
+    setTags(note.tags ? note.tags.join(', ') : '');
+  } else {
+    setIsEditing(false);
+    setCurrentNote(null);
+    setTitle('');
+    setContent('');
+    setCategory('');
+    setTags('');
+  }
+  setNoteDialogOpen(true);
+};
 
-  const handleOpenNoteDialog = (note = null) => {
-    if (note) {
-      setIsEditing(true);
-      setCurrentNote(note);
-      setTitle(note.title);
-      setContent(note.content);
-      setCategory(note.category || '');
-      setTags(note.tags ? note.tags.join(', ') : '');
-    } else {
-      setIsEditing(false);
-      setCurrentNote(null);
-      setTitle('');
-      setContent('');
-      setCategory('');
-      setTags('');
-    }
-    setNoteDialogOpen(true);
-  };
+const handleCloseNoteDialog = () => {
+  setNoteDialogOpen(false);
+  setError(null);
+};
 
-  const handleCloseNoteDialog = () => {
-    setNoteDialogOpen(false);
-    setError(null);
-  };
+const handleOpenDeleteDialog = (note) => {
+  setNoteToDelete(note);
+  setDeleteDialogOpen(true);
+};
 
-  const handleOpenDeleteDialog = (note) => {
-    setNoteToDelete(note);
-    setDeleteDialogOpen(true);
-  };
+const handleCloseDeleteDialog = () => {
+  setDeleteDialogOpen(false);
+  setNoteToDelete(null);
+};
 
-  const handleCloseDeleteDialog = () => {
-    setDeleteDialogOpen(false);
-    setNoteToDelete(null);
-  };
-  
-  const handleOpenViewModal = (note) => {
-    setViewingNote(note);
-    setViewModalOpen(true);
-  };
-  
-  const handleCloseViewModal = () => {
-    setViewModalOpen(false);
-    setViewingNote(null);
-  };
+const handleSelectNote = (note) => {
+  setSelectedNote(note);
+};
 
   const handleSaveNote = async () => {
     if (!title || !content) {
@@ -167,67 +157,136 @@ function NotesList({ notes, projectId, onRefresh }) {
       {notes.length === 0 ? (
         <Alert severity="info">No notes found for this project. Click "Add Note" to create one.</Alert>
       ) : (
-        <List>
-          {notes.map((note) => (
-            <ListItem key={note.id} sx={{ mb: 2, p: 0 }}>
-              <Card sx={{ width: '100%' }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Typography variant="h6" component="div">
-                      {note.title}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDate(note.updatedAt)}
-                    </Typography>
+        <Grid container spacing={3}>
+          {/* Left column - Notes list */}
+          <Grid item xs={12} md={4}>
+            <Paper>
+              <Typography variant="h6" sx={{ p: 2, bgcolor: 'primary.main', color: 'white' }}>
+                Notes ({notes.length})
+              </Typography>
+              <List sx={{ maxHeight: '500px', overflow: 'auto' }}>
+                {notes.map((note) => (
+                  <ListItemButton
+                    key={note.id}
+                    selected={selectedNote && selectedNote.id === note.id}
+                    onClick={() => handleSelectNote(note)}
+                  >
+                    <ListItemText
+                      primary={
+                        <>
+                          <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                            {note.title}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            {formatDate(note.createdAt || note.updatedAt)}
+                          </Typography>
+                        </>
+                      }
+                      secondary={
+                        <Box sx={{ mt: 1 }}>
+                          {note.category && (
+                            <Typography component="div" variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
+                              Category: {note.category}
+                            </Typography>
+                          )}
+                          {note.tags && note.tags.length > 0 && (
+                            <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
+                              {note.tags.map((tag, index) => (
+                                <Chip key={index} label={tag} size="small" />
+                              ))}
+                            </Stack>
+                          )}
+                          <Box sx={{ display: 'flex', mt: 1 }}>
+                            <Button
+                              size="small"
+                              startIcon={<EditIcon />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenNoteDialog(note);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="small"
+                              color="error"
+                              startIcon={<DeleteIcon />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDeleteDialog(note);
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </Box>
+                        </Box>
+                      }
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
+            </Paper>
+          </Grid>
+          
+          {/* Right column - Note content */}
+          <Grid item xs={12} md={8}>
+            <Paper sx={{ height: '100%', minHeight: '500px' }}>
+              {!selectedNote ? (
+                <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <Typography variant="subtitle1" color="text.secondary">
+                    Select a note to view its content
+                  </Typography>
+                </Box>
+              ) : (
+                <Box>
+                  <Box sx={{ p: 2, bgcolor: 'primary.main', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <Typography variant="subtitle1" sx={{ color: 'white', fontWeight: 'medium' }}>
+                        {selectedNote.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'white', opacity: 0.9 }}>
+                        {formatDate(selectedNote.updatedAt)}
+                      </Typography>
+                    </Box>
+                    
+                    {selectedNote.category && (
+                      <Typography variant="caption" sx={{ color: 'white', opacity: 0.9, display: 'block', mt: 0.5 }}>
+                        Category: {selectedNote.category}
+                      </Typography>
+                    )}
+                    
+                    {selectedNote.tags && selectedNote.tags.length > 0 && (
+                      <Box sx={{ mt: 1 }}>
+                        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                          {selectedNote.tags.map((tag, index) => (
+                            <Chip
+                              key={index}
+                              label={tag}
+                              size="small"
+                              sx={{
+                                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                '& .MuiChip-label': {
+                                  fontSize: '0.7rem'
+                                }
+                              }}
+                            />
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
                   </Box>
                   
-                  {note.category && (
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
-                      Category: {note.category}
+                  <Box sx={{ p: 3, maxHeight: '500px', overflow: 'auto', bgcolor: '#f8f9fa' }}>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: '#000' }}>
+                      {selectedNote.content}
                     </Typography>
-                  )}
-                  
-                  <Typography variant="body1" sx={{ mt: 2, whiteSpace: 'pre-wrap' }}>
-                    {truncateContent(note.content)}
-                  </Typography>
-                  
-                  {note.tags && note.tags.length > 0 && (
-                    <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                      {note.tags.map((tag, index) => (
-                        <Chip key={index} label={tag} size="small" />
-                      ))}
-                    </Stack>
-                  )}
-                </CardContent>
-                <Divider />
-                <CardActions>
-                  <Button
-                    size="small"
-                    startIcon={<VisibilityIcon />}
-                    onClick={() => handleOpenViewModal(note)}
-                  >
-                    View
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<EditIcon />}
-                    onClick={() => handleOpenNoteDialog(note)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => handleOpenDeleteDialog(note)}
-                  >
-                    Delete
-                  </Button>
-                </CardActions>
-              </Card>
-            </ListItem>
-          ))}
-        </List>
+                  </Box>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
       )}
 
       {/* Note Dialog */}
@@ -323,78 +382,6 @@ function NotesList({ notes, projectId, onRefresh }) {
         </DialogActions>
       </Dialog>
 
-      {/* View Note Modal */}
-      <Modal
-        open={viewModalOpen}
-        onClose={handleCloseViewModal}
-        aria-labelledby="view-note-modal"
-        aria-describedby="view-note-full-content"
-      >
-        <Paper
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '80%',
-            maxWidth: 800,
-            maxHeight: '80vh',
-            overflow: 'auto',
-            p: 4,
-            outline: 'none',
-          }}
-        >
-          {viewingNote && (
-            <>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Typography variant="h5" component="h2">
-                  {viewingNote.title}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {formatDate(viewingNote.updatedAt)}
-                </Typography>
-              </Box>
-              
-              {viewingNote.category && (
-                <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 2 }}>
-                  Category: {viewingNote.category}
-                </Typography>
-              )}
-              
-              <Divider sx={{ mb: 3 }} />
-              
-              <Typography variant="body1" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
-                {viewingNote.content}
-              </Typography>
-              
-              {viewingNote.tags && viewingNote.tags.length > 0 && (
-                <Box sx={{ mt: 2, mb: 3 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Tags:</Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap">
-                    {viewingNote.tags.map((tag, index) => (
-                      <Chip key={index} label={tag} size="small" />
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-              
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                <Button onClick={handleCloseViewModal}>Close</Button>
-                <Button
-                  startIcon={<EditIcon />}
-                  onClick={() => {
-                    handleCloseViewModal();
-                    handleOpenNoteDialog(viewingNote);
-                  }}
-                  sx={{ ml: 1 }}
-                >
-                  Edit
-                </Button>
-              </Box>
-            </>
-          )}
-        </Paper>
-      </Modal>
     </Box>
   );
 }
