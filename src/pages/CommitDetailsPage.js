@@ -98,6 +98,25 @@ function CommitDetailsPage() {
     }
   };
   
+  const getOperationPastTense = (operation) => {
+    switch (operation) {
+      case 'add':
+        return 'Added';
+      case 'delete':
+        return 'Deleted';
+      case 'modify':
+        return 'Modified';
+      default:
+        // Capitalize and try to make past tense
+        const capitalized = operation.charAt(0).toUpperCase() + operation.slice(1);
+        if (capitalized.endsWith('e')) {
+          return capitalized + 'd';
+        } else {
+          return capitalized + 'ed';
+        }
+    }
+  };
+  
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
     if (!bytes) return 'Unknown';
@@ -228,28 +247,43 @@ function CommitDetailsPage() {
                       {getOperationIcon(snapshot.operation)}
                     </ListItemIcon>
                     <ListItemText
-                      primary={snapshot.filePath}
+                      primary={
+                        <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                          {snapshot.filePath}
+                        </Typography>
+                      }
                       secondary={
-                        <React.Fragment>
-                          <Typography component="span" variant="body2" color="text.primary">
-                            Status: {snapshot.status || snapshot.operation.charAt(0).toUpperCase() + snapshot.operation.slice(1)}
+                        <Box sx={{ mt: 1 }}>
+                          <Typography component="div" variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
+                            Status: {snapshot.status || getOperationPastTense(snapshot.operation)}
                           </Typography>
-                          {snapshot.size && (
-                            <Typography component="span" variant="body2" display="block">
-                              Size: {formatFileSize(snapshot.size)}
-                            </Typography>
-                          )}
-                          {snapshot.createdAt && (
-                            <Typography component="span" variant="body2" display="block">
-                              Created: {format(new Date(snapshot.createdAt), 'PPp')}
-                            </Typography>
-                          )}
-                          {snapshot.modifiedAt && (
-                            <Typography component="span" variant="body2" display="block">
-                              Modified: {format(new Date(snapshot.modifiedAt), 'PPp')}
-                            </Typography>
-                          )}
-                        </React.Fragment>
+                          
+                          <Grid container spacing={1} sx={{ mt: 0.5 }}>
+                            {snapshot.size !== undefined && snapshot.size !== null && (
+                              <Grid item xs={12} sm={6}>
+                                <Typography component="div" variant="body2" color="text.secondary">
+                                  <strong>Size:</strong> {formatFileSize(snapshot.size)}
+                                </Typography>
+                              </Grid>
+                            )}
+                            
+                            {snapshot.createdAt && (
+                              <Grid item xs={12} sm={6}>
+                                <Typography component="div" variant="body2" color="text.secondary">
+                                  <strong>Created:</strong> {format(new Date(snapshot.createdAt), 'PPp')}
+                                </Typography>
+                              </Grid>
+                            )}
+                            
+                            {snapshot.modifiedAt && (
+                              <Grid item xs={12} sm={6}>
+                                <Typography component="div" variant="body2" color="text.secondary">
+                                  <strong>Modified:</strong> {format(new Date(snapshot.modifiedAt), 'PPp')}
+                                </Typography>
+                              </Grid>
+                            )}
+                          </Grid>
+                        </Box>
                       }
                     />
                   </ListItemButton>

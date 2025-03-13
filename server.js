@@ -781,13 +781,29 @@ app.post('/api/mcp/project-hub/get_file_snapshots', async (req, res) => {
           
           const operation = changes.find(c => c.id === file.change_id)?.type || 'modify';
           
+          // Convert operation to past tense
+          let status;
+          switch (operation) {
+            case 'add':
+              status = 'Added';
+              break;
+            case 'delete':
+              status = 'Deleted';
+              break;
+            case 'modify':
+              status = 'Modified';
+              break;
+            default:
+              status = operation.charAt(0).toUpperCase() + operation.slice(1);
+          }
+          
           return {
             id: `synthetic_${file.change_id}_${file.file_path.replace(/[^a-zA-Z0-9]/g, '_')}`,
             commitId: commitId,
             filePath: file.file_path,
             fullPath: file.file_path, // Full path relative to project root
             operation,
-            status: operation.charAt(0).toUpperCase() + operation.slice(1), // Capitalize operation
+            status,
             size: fileStats ? fileStats.size : null,
             createdAt: fileStats ? fileStats.birthtime.toISOString() : null,
             modifiedAt: fileStats ? fileStats.mtime.toISOString() : null
@@ -826,6 +842,17 @@ app.post('/api/mcp/project-hub/get_file_snapshots', async (req, res) => {
             size: 2048,
             createdAt: now.toISOString(),
             modifiedAt: now.toISOString()
+          },
+          {
+            id: `dummy_${commitId}_3`,
+            commitId: commitId,
+            filePath: 'example/path/file3.js',
+            fullPath: 'example/path/file3.js',
+            operation: 'delete',
+            status: 'Deleted',
+            size: 512,
+            createdAt: new Date(now.getTime() - 172800000).toISOString(), // 2 days ago
+            modifiedAt: new Date(now.getTime() - 43200000).toISOString() // 12 hours ago
           }
         ];
         return res.json(dummySnapshots);
