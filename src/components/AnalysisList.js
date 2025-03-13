@@ -355,7 +355,13 @@ function AnalysisList({ projectId, project }) {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value, name, props) => [`${(props.percent * 100).toFixed(0)}%`, name]} />
+                      <Tooltip formatter={(value, name, props) => {
+                        // Ensure we have a valid percent value
+                        const percent = props && typeof props.percent === 'number' ?
+                          `${(props.percent * 100).toFixed(0)}%` :
+                          `${Math.round((value / fileTypes.reduce((sum, item) => sum + item.value, 0)) * 100)}%`;
+                        return [percent, name];
+                      }} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
