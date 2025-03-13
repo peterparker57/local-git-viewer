@@ -258,31 +258,22 @@ function CommitDetailsPage() {
                             Status: {snapshot.status || getOperationPastTense(snapshot.operation)}
                           </Typography>
                           
-                          <Grid container spacing={1} sx={{ mt: 0.5 }}>
-                            {snapshot.size !== undefined && snapshot.size !== null && (
-                              <Grid item xs={12} sm={6}>
-                                <Typography component="div" variant="body2" color="text.secondary">
-                                  <strong>Size:</strong> {formatFileSize(snapshot.size)}
-                                </Typography>
-                              </Grid>
-                            )}
-                            
-                            {snapshot.createdAt && (
-                              <Grid item xs={12} sm={6}>
-                                <Typography component="div" variant="body2" color="text.secondary">
-                                  <strong>Created:</strong> {format(new Date(snapshot.createdAt), 'PPp')}
-                                </Typography>
-                              </Grid>
-                            )}
-                            
-                            {snapshot.modifiedAt && (
-                              <Grid item xs={12} sm={6}>
-                                <Typography component="div" variant="body2" color="text.secondary">
-                                  <strong>Modified:</strong> {format(new Date(snapshot.modifiedAt), 'PPp')}
-                                </Typography>
-                              </Grid>
-                            )}
-                          </Grid>
+                          {/* Always show file info in a consistent format */}
+                          <Typography component="div" variant="body2" color="text.secondary" sx={{ mt: 1, mb: 0.5 }}>
+                            <strong>Size:</strong> {snapshot.size ? formatFileSize(snapshot.size) : 'Unknown'}
+                          </Typography>
+                          
+                          <Typography component="div" variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                            <strong>Created:</strong> {snapshot.createdAt
+                              ? format(new Date(snapshot.createdAt), 'MMM d, yyyy h:mm a')
+                              : 'Unknown'}
+                          </Typography>
+                          
+                          <Typography component="div" variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                            <strong>Modified:</strong> {snapshot.modifiedAt
+                              ? format(new Date(snapshot.modifiedAt), 'MMM d, yyyy h:mm a')
+                              : 'Unknown'}
+                          </Typography>
                         </Box>
                       }
                     />
