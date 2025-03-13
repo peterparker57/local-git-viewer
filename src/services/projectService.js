@@ -201,3 +201,59 @@ export const getFileContent = async (snapshotId) => {
     return handleApiError(error);
   }
 };
+
+// Get notes for a project
+export const getProjectNotes = async (projectId) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/mcp/project-hub/get_project_notes`, {
+      projectId
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Create a new note
+export const createNote = async (projectId, title, content, category, tags) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/mcp/project-hub/create_note`, {
+      projectId,
+      title,
+      content,
+      category,
+      tags
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Update an existing note
+export const updateNote = async (noteId, title, content, category, tags) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/mcp/project-hub/update_note`, {
+      noteId,
+      title,
+      content,
+      category,
+      tags
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Delete a note
+export const deleteNote = async (noteId) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/mcp/project-hub/delete_note`, {
+      noteId
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};

@@ -59,14 +59,19 @@ const runQuery = (sql, params = []) => {
 app.post('/api/mcp/project-hub/list_projects', async (req, res) => {
   try {
     const sql = `
-      SELECT 
-        p.id, 
-        p.name, 
-        p.description, 
+      SELECT
+        p.id,
+        p.name,
+        p.description,
         p.type,
         p.path,
         p.repository_owner as repositoryOwner,
-        p.repository_name as repositoryName
+        p.repository_name as repositoryName,
+        p.status,
+        p.last_commit as lastCommit,
+        p.technologies,
+        p.created_at as createdAt,
+        p.updated_at as updatedAt
       FROM projects p
       ORDER BY p.name
     `;
@@ -80,6 +85,11 @@ app.post('/api/mcp/project-hub/list_projects', async (req, res) => {
       description: project.description,
       type: project.type,
       path: project.path,
+      status: project.status,
+      lastCommit: project.lastCommit,
+      technologies: project.technologies ? JSON.parse(project.technologies) : [],
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
       repository: project.repositoryOwner ? {
         owner: project.repositoryOwner,
         name: project.repositoryName
@@ -99,14 +109,19 @@ app.post('/api/mcp/project-hub/get_project', async (req, res) => {
     const { projectId } = req.body;
     
     const sql = `
-      SELECT 
-        p.id, 
-        p.name, 
-        p.description, 
+      SELECT
+        p.id,
+        p.name,
+        p.description,
         p.type,
         p.path,
         p.repository_owner as repositoryOwner,
-        p.repository_name as repositoryName
+        p.repository_name as repositoryName,
+        p.status,
+        p.last_commit as lastCommit,
+        p.technologies,
+        p.created_at as createdAt,
+        p.updated_at as updatedAt
       FROM projects p
       WHERE p.id = ?
     `;
@@ -126,6 +141,11 @@ app.post('/api/mcp/project-hub/get_project', async (req, res) => {
       description: project.description,
       type: project.type,
       path: project.path,
+      status: project.status,
+      lastCommit: project.lastCommit,
+      technologies: project.technologies ? JSON.parse(project.technologies) : [],
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
       repository: project.repositoryOwner ? {
         owner: project.repositoryOwner,
         name: project.repositoryName
@@ -816,6 +836,179 @@ app.post('/api/mcp/project-hub/get_file_content', async (req, res) => {
     res.json(snapshots[0]);
   } catch (error) {
     console.error('Error getting file content:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint to get notes for a project
+app.post('/api/mcp/project-hub/get_project_notes', async (req, res) => {
+  try {
+    const { projectId } = req.body;
+    
+    const sql = `
+      SELECT
+        n.id,
+        n.title,
+        n.content,
+        n.category,
+        n.tags,
+        n.created_at as createdAt,
+        n.updated_at as updatedAt
+      FROM notes n
+      WHERE n.project_id = ?
+      ORDER BY n.updated_at DESC
+    `;
+    
+    const notes = await runQuery(sql, [projectId]);
+    
+    // Parse tags JSON if it exists
+    const formattedNotes = notes.map(note => ({
+      ...note,
+      tags: note.tags ? JSON.parse(note.tags) : []
+    }));
+    
+    res.json(formattedNotes);
+  } catch (error) {
+    console.error('Error getting project notes:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint to create a note
+app.post('/api/mcp/project-hub/create_note', async (req, res) => {
+  try {
+    const { projectId, title, content, category, tags } = req.body;
+    
+    // Validate required fields
+    if (!title || !content) {
+      return res.status(400).json({ error: 'Title and content are required' });
+    }
+    
+    const noteId = `note_${Date.now()}`;
+    const timestamp = new Date().toISOString();
+    const tagsJson = tags ? JSON.stringify(tags) : null;
+    
+    const sql = `
+      INSERT INTO notes (
+        id, project_id, title, content, category, tags, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    await runQuery(sql, [
+      noteId,
+      projectId,
+      title,
+      content,
+      category || null,
+      tagsJson,
+      timestamp,
+      timestamp
+    ]);
+    
+    // Get the created note
+    const getNoteSql = `
+      SELECT
+        n.id,
+        n.title,
+        n.content,
+        n.category,
+        n.tags,
+        n.created_at as createdAt,
+        n.updated_at as updatedAt
+      FROM notes n
+      WHERE n.id = ?
+    `;
+    
+    const notes = await runQuery(getNoteSql, [noteId]);
+    
+    if (notes.length === 0) {
+      return res.status(500).json({ error: 'Failed to retrieve created note' });
+    }
+    
+    const note = notes[0];
+    note.tags = note.tags ? JSON.parse(note.tags) : [];
+    
+    res.json(note);
+  } catch (error) {
+    console.error('Error creating note:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint to update a note
+app.post('/api/mcp/project-hub/update_note', async (req, res) => {
+  try {
+    const { noteId, title, content, category, tags } = req.body;
+    
+    // Validate required fields
+    if (!noteId || !title || !content) {
+      return res.status(400).json({ error: 'Note ID, title, and content are required' });
+    }
+    
+    const timestamp = new Date().toISOString();
+    const tagsJson = tags ? JSON.stringify(tags) : null;
+    
+    const sql = `
+      UPDATE notes
+      SET title = ?, content = ?, category = ?, tags = ?, updated_at = ?
+      WHERE id = ?
+    `;
+    
+    await runQuery(sql, [
+      title,
+      content,
+      category || null,
+      tagsJson,
+      timestamp,
+      noteId
+    ]);
+    
+    // Get the updated note
+    const getNoteSql = `
+      SELECT
+        n.id,
+        n.title,
+        n.content,
+        n.category,
+        n.tags,
+        n.created_at as createdAt,
+        n.updated_at as updatedAt
+      FROM notes n
+      WHERE n.id = ?
+    `;
+    
+    const notes = await runQuery(getNoteSql, [noteId]);
+    
+    if (notes.length === 0) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+    
+    const note = notes[0];
+    note.tags = note.tags ? JSON.parse(note.tags) : [];
+    
+    res.json(note);
+  } catch (error) {
+    console.error('Error updating note:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint to delete a note
+app.post('/api/mcp/project-hub/delete_note', async (req, res) => {
+  try {
+    const { noteId } = req.body;
+    
+    if (!noteId) {
+      return res.status(400).json({ error: 'Note ID is required' });
+    }
+    
+    const sql = `DELETE FROM notes WHERE id = ?`;
+    
+    await runQuery(sql, [noteId]);
+    
+    res.json({ success: true, message: `Note ${noteId} deleted successfully` });
+  } catch (error) {
+    console.error('Error deleting note:', error);
     res.status(500).json({ error: error.message });
   }
 });
